@@ -111,6 +111,8 @@ def rotWord(list):
 ##########
 
 def cipher(inpt, key):
+  print("CIPHER (ENCRYPT) :")
+
   Nb = 4
   Nk = None
   Nr = None
@@ -185,17 +187,75 @@ def addRoundKey(state, key):
 # INVERSE CIPHER #
 ##################
 
-def invCipher():
-  pass
+def invCipher(inpt, key):
+  print("\nINVERSE CIPHER (DECRYPT) :")
 
-def invSubBytes():
-  pass
+  Nb = 4
+  Nk = None
+  Nr = None
+  key_size = len(key) * 8
+  if key_size == 128:
+    Nk = 4
+    Nr = 10
+  elif key_size == 192:
+    Nk = 6
+    Nr = 12
+  elif key_size == 256:
+    Nk = 8
+    Nr = 14
+  else:
+    return
 
-def invShiftRows():
-  pass
+  log(0, 'iinput', inpt)
 
-def invMixColumns():
-  pass
+  w = keyExpansion(key, Nk, Nr)
+  state = inpt
+  addRoundKey(state, w[Nr*Nb**2:(Nr+1)*Nb**2])
+  log(0, 'ik_sch', w[Nr*Nb**2:(Nr+1)*Nb**2])
+  
+  for i in reversed(range(1, Nr)):
+    log(Nr-i, 'istart', state)
+    invShiftRows(state)
+    log(Nr-i, 'is_row', state)
+    invSubBytes(state)
+    log(Nr-i, 'is_box', state)
+    addRoundKey(state, w[i*Nb**2:(i+1)*Nb**2])
+    log(Nr-i, 'ik_sch', w[i*Nb**2:(i+1)*Nb**2])
+    invMixColumns(state)
+    log(Nr-i, 'im_col', state)
+
+
+  log(Nr, 'istart', state)
+  invShiftRows(state)
+  log(Nr, 'is_row', state)
+  invSubBytes(state)
+  log(Nr, 'is_box', state)
+  addRoundKey(state, w[0:Nb**2])
+  log(Nr, 'ik_sch', w[0:Nb**2])
+
+  log(Nr, 'ioutpt', state)
+
+def invSubBytes(state):
+	for i in range(len(state)):
+		tup = splitByte(state[i])
+		state[i] = InvSbox[tup[1],tup[0]]
+
+def invShiftRows(state):
+  for i in range(4):
+    temp = [state[i], state[i+4], state[i+8], state[i+12]]
+    temp = temp[-i:] + temp[:-i]
+    [state[i], state[i+4], state[i+8], state[i+12]] = temp 
+
+def invMixColumns(state):
+  x = 0
+  while x < len(state):
+    temp = []
+    temp.append(ff_mult(0x0e, state[x]) ^ ff_mult(0x0b, state[x+1]) ^ ff_mult(0x0d, state[x+2]) ^ ff_mult(0x09, state[x+3]))
+    temp.append(ff_mult(0x09, state[x]) ^ ff_mult(0x0e, state[x+1]) ^ ff_mult(0x0b, state[x+2]) ^ ff_mult(0x0d, state[x+3]))
+    temp.append(ff_mult(0x0d, state[x]) ^ ff_mult(0x09, state[x+1]) ^ ff_mult(0x0e, state[x+2]) ^ ff_mult(0x0b, state[x+3]))
+    temp.append(ff_mult(0x0b, state[x]) ^ ff_mult(0x0d, state[x+1]) ^ ff_mult(0x09, state[x+2]) ^ ff_mult(0x0e, state[x+3]))
+    state[x:x+4] = temp
+    x += 4
 
 ##################
 # Helpful Arrays #
@@ -309,17 +369,18 @@ InvSbox = np.array([
 # encrpyted = cipher(inpt, key)
 #displayHexList(encrpyted)
 
-
 # print("\nC.1 AES-128 (Nk=4, Nr=10)\n")
 # plaintext = [0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]
 # key = [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f]
 # cipher(plaintext, key)
+# invCipher(plaintext, key)
 
 # print("\nC.2 AES-192 (Nk=6, Nr=12)\n")
 # plaintext = [0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]
 # key = [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 
 #         0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17]
 # cipher(plaintext, key)
+# invCipher(plaintext, key)
 
 # print("\nC.3 AES-256 (Nk=8, Nr=14)\n")
 # plaintext = [0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]
@@ -327,3 +388,4 @@ InvSbox = np.array([
 #         0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 
 #         0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f]
 # cipher(plaintext, key)
+# invCipher(plaintext, key)
